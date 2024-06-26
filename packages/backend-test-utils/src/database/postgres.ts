@@ -140,14 +140,16 @@ export class PostgresEngine implements Engine {
   }
 
   async createDatabaseInstance(): Promise<Knex> {
-    const adminConnection = this.#connectAdmin();
+    let adminConnection: Knex | undefined;
+    let knexInstance: Knex | undefined;
     try {
+      adminConnection = this.#connectAdmin();
       const databaseName = `db${randomBytes(16).toString('hex')}`;
 
       await adminConnection.raw('CREATE DATABASE ??', [databaseName]);
       this.#databaseNames.push(databaseName);
 
-      const knexInstance = knexFactory({
+      knexInstance = knexFactory({
         client: this.#properties.driver,
         connection: {
           ...this.#connection,
@@ -158,8 +160,20 @@ export class PostgresEngine implements Engine {
       this.#knexInstances.push(knexInstance);
 
       return knexInstance;
+    } catch (e) {
+      console.log(
+        '###############################################################',
+      );
+      console.log('CREATE DB ERROR');
+      console.log('e', e);
+      console.log('stack', e.stack);
+      console.log('adminConnection', adminConnection);
+      console.log(
+        '###############################################################',
+      );
+      throw e;
     } finally {
-      await adminConnection.destroy();
+      await adminConnection?.destroy();
     }
   }
 
